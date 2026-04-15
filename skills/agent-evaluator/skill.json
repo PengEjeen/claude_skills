@@ -1,0 +1,50 @@
+{
+  "name": "agent-evaluator",
+  "description": "에이전트를 자동으로 테스트하고 성능 지표(정확도, 비용, 속도 등) 산출",
+  "command": {
+    "summary": "Evaluate agent performance with comprehensive metrics",
+    "syntax": "/agent-evaluator [--target AGENT] [--dataset DATA] [OPTIONS]",
+    "examples": [
+      "/agent-evaluator --target chatbot_v9 --dataset qa_100",
+      "/agent-evaluator --quick --count 10",
+      "/agent-evaluator --generate-dataset --topic \"종합소득세\" --count 50",
+      "/agent-evaluator --compare-with v8",
+      "/agent-evaluator --filter \"category:tax_rate\"",
+      "/agent-evaluator --watch --interval 1h"
+    ]
+  },
+  "parameters": {
+    "target": {
+      "type": "string",
+      "description": "평가 대상 에이전트 (예: chatbot_v9, og_rag)",
+      "required": false,
+      "default": "chatbot_v9"
+    },
+    "dataset": {
+      "type": "string",
+      "description": "테스트 데이터셋 (예: qa_100, qa_smoke_test)",
+      "required": false,
+      "default": "qa_100"
+    },
+    "quick": {
+      "type": "boolean",
+      "description": "빠른 테스트 (10개 질문)",
+      "required": false
+    },
+    "generate-dataset": {
+      "type": "boolean",
+      "description": "테스트 데이터 자동 생성",
+      "required": false
+    },
+    "compare-with": {
+      "type": "string",
+      "description": "비교할 버전 (예: v8)",
+      "required": false
+    },
+    "watch": {
+      "type": "boolean",
+      "description": "지속적 모니터링 모드",
+      "required": false
+    }
+  }
+}

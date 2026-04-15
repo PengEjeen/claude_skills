@@ -1,0 +1,27 @@
+{
+  "name": "research-agent-tech",
+  "description": "2026년 최신 LLM/Agent 논문과 기술 트렌드를 조사하고 적용 가능한 사례 수집",
+  "command": {
+    "summary": "Research latest AI agent technologies and suggest implementations",
+    "syntax": "/research-agent-tech [topic] [--mode MODE]",
+    "examples": [
+      "/research-agent-tech \"RAG 정확도 향상\"",
+      "/research-agent-tech \"Multi-Agent System\"",
+      "/research-agent-tech --mode weekly-digest",
+      "/research-agent-tech \"Prompt Optimization\" --compare-current"
+    ]
+  },
+  "parameters": {
+    "topic": {
+      "type": "string",
+      "description": "조사할 주제 (예: RAG, Multi-Agent, Tool-Use)",
+      "required": false
+    },
+    "mode": {
+      "type": "enum",
+      "values": ["research", "weekly-digest", "compare-current"],
+      "default": "research",
+      "description": "실행 모드"
+    }
+  }
+}

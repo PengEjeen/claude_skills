@@ -1,0 +1,60 @@
+# Build artifacts
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+
+# Dependencies
+node_modules/
+vendor/
+.venv/
+__pycache__/
+*.pyc
+
+# Lock files (large, not useful for Claude)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+Cargo.lock
+go.sum
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test artifacts
+coverage/
+.pytest_cache/
+.nyc_output/
+htmlcov/
+
+# Large binary files
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.mp4
+*.webm
+*.zip
+*.tar.gz
+*.pdf
+
+# Traces (internal)
+traces/
+*.jsonl

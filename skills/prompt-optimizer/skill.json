@@ -1,0 +1,36 @@
+{
+  "name": "prompt-optimizer",
+  "description": "프롬프트와 LangGraph 구성을 자동으로 최적화하여 성능/비용/속도 개선",
+  "command": {
+    "summary": "Optimize prompts and LangGraph structures",
+    "syntax": "/prompt-optimizer [--file FILE] [--langgraph FILE] [--save VERSION]",
+    "examples": [
+      "/prompt-optimizer --file src/prompts/templates/tax_expert_system.txt",
+      "/prompt-optimizer --langgraph src/multi_excel/graph.py",
+      "/prompt-optimizer --generate-examples --task \"재무제표 분석\"",
+      "/prompt-optimizer --auto --threshold 10%"
+    ]
+  },
+  "parameters": {
+    "file": {
+      "type": "path",
+      "description": "최적화할 프롬프트 파일 경로",
+      "required": false
+    },
+    "langgraph": {
+      "type": "path",
+      "description": "최적화할 LangGraph 파일 경로",
+      "required": false
+    },
+    "generate-examples": {
+      "type": "boolean",
+      "description": "Few-shot 예제 자동 생성",
+      "required": false
+    },
+    "save": {
+      "type": "string",
+      "description": "최적화 버전 저장 (예: version_c)",
+      "required": false
+    }
+  }
+}

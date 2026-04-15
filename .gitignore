@@ -1,0 +1,44 @@
+# Docs site (deployed separately via Vercel, not part of the setup)
+docs-site/
+.vercel/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# Progress (session-specific, not tracked)
+progress/handoff-*.md
+
+# Cache
+.cache/
+*.pyc
+__pycache__/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+*.min.js
+*.min.css
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage/
+.pytest_cache/
+.nyc_output/

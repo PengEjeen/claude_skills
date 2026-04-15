@@ -1,0 +1,197 @@
+# GitHub Actions: Automated Agent Evaluation
+# Runs on every PR that touches RAG code
+
+name: Agent Evaluation
+
+on:
+  pull_request:
+    paths:
+      - 'src/ontology/**'
+      - 'src/prompts/**'
+      - 'backend/routes/og_rag/**'
+      - 'src/retrieval/**'
+  schedule:
+    # Daily evaluation at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Test dataset to use'
+        required: false
+        default: 'qa_smoke_test'
+      threshold:
+        description: 'Minimum score threshold'
+        required: false
+        default: '85'
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comparison
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ragas sentence-transformers prometheus-client
+
+      - name: Download test dataset
+        run: |
+          # Download from S3 or use local
+          aws s3 cp s3://your-bucket/test-datasets/${{ github.event.inputs.dataset || 'qa_smoke_test' }}.json ./test_dataset.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run evaluation
+        id: eval
+        run: |
+          python skills/agent-evaluator/src/ragas_evaluator.py \
+            --dataset ./test_dataset.json \
+            --output ./eval_results.json \
+            --threshold ${{ github.event.inputs.threshold || '85' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Parse results
+        id: parse
+        run: |
+          # Extract key metrics
+          OVERALL_SCORE=$(jq -r '.overall_score' eval_results.json)
+          CONTEXT_PRECISION=$(jq -r '.metrics.context_precision.mean' eval_results.json)
+          FAITHFULNESS=$(jq -r '.metrics.faithfulness.mean' eval_results.json)
+          ERROR_RATE=$(jq -r '.error_rate' eval_results.json)
+
+          echo "overall_score=$OVERALL_SCORE" >> $GITHUB_OUTPUT
+          echo "context_precision=$CONTEXT_PRECISION" >> $GITHUB_OUTPUT
+          echo "faithfulness=$FAITHFULNESS" >> $GITHUB_OUTPUT
+          echo "error_rate=$ERROR_RATE" >> $GITHUB_OUTPUT
+
+      - name: Check threshold
+        run: |
+          OVERALL_SCORE=${{ steps.parse.outputs.overall_score }}
+          THRESHOLD=${{ github.event.inputs.threshold || '85' }}
+
+          if (( $(echo "$OVERALL_SCORE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Evaluation failed: Score $OVERALL_SCORE < Threshold $THRESHOLD"
+            exit 1
+          else
+            echo "✅ Evaluation passed: Score $OVERALL_SCORE >= Threshold $THRESHOLD"
+          fi
+
+      - name: Generate report
+        if: always()
+        run: |
+          python -c "
+          import json
+          with open('eval_results.json') as f:
+              data = json.load(f)
+
+          report = f'''
+          ## 🤖 Agent Evaluation Report
+
+          **Overall Score:** {data['overall_score']:.1f}/100 {'✅' if data['overall_score'] >= 85 else '⚠️'}
+
+          ### Metrics
+          | Metric | Score | Status |
+          |--------|-------|--------|
+          | Context Precision | {data['metrics']['context_precision']['mean']:.3f} | {'✅' if data['metrics']['context_precision']['mean'] >= 0.8 else '⚠️'} |
+          | Context Recall | {data['metrics']['context_recall']['mean']:.3f} | {'✅' if data['metrics']['context_recall']['mean'] >= 0.75 else '⚠️'} |
+          | Faithfulness | {data['metrics']['faithfulness']['mean']:.3f} | {'✅' if data['metrics']['faithfulness']['mean'] >= 0.85 else '⚠️'} |
+          | Answer Relevancy | {data['metrics']['answer_relevancy']['mean']:.3f} | {'✅' if data['metrics']['answer_relevancy']['mean'] >= 0.85 else '⚠️'} |
+
+          ### Performance
+          - **Avg Response Time:** {data['performance']['avg_response_time']:.2f}s
+          - **P95 Response Time:** {data['performance']['p95_response_time']:.2f}s
+          - **Avg Cost:** ${data['performance']['avg_cost']:.4f}/query
+          - **Error Rate:** {data['error_rate']*100:.1f}%
+
+          ### Recommendations
+          '''
+
+          # Add recommendations based on scores
+          if data['metrics']['context_precision']['mean'] < 0.8:
+              report += '\\n- ⚠️ **Context Precision low:** Consider adding a reranker'
+
+          if data['metrics']['faithfulness']['mean'] < 0.85:
+              report += '\\n- ⚠️ **Faithfulness low:** Strengthen grounding prompts'
+
+          if data['performance']['avg_response_time'] > 2.5:
+              report += '\\n- ⚠️ **Response time high:** Optimize retrieval or use prompt caching'
+
+          with open('eval_report.md', 'w') as f:
+              f.write(report)
+          "
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('eval_report.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results
+          path: |
+            eval_results.json
+            eval_report.md
+
+      - name: Send Slack notification
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚨 Agent Evaluation Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Agent Evaluation Failed*\n\nScore: ${{ steps.parse.outputs.overall_score }}/100\nThreshold: ${{ github.event.inputs.threshold || '85' }}\n\n<${{ github.event.pull_request.html_url || github.event.repository.html_url }}|View Details>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Push metrics to Prometheus
+        if: always()
+        run: |
+          # Push metrics to Prometheus Pushgateway
+          cat <<EOF | curl --data-binary @- http://prometheus-pushgateway:9091/metrics/job/agent_evaluation
+          # TYPE agent_overall_score gauge
+          agent_overall_score ${{ steps.parse.outputs.overall_score }}
+
+          # TYPE agent_context_precision gauge
+          agent_context_precision ${{ steps.parse.outputs.context_precision }}
+
+          # TYPE agent_faithfulness gauge
+          agent_faithfulness ${{ steps.parse.outputs.faithfulness }}
+
+          # TYPE agent_error_rate gauge
+          agent_error_rate ${{ steps.parse.outputs.error_rate }}
+          EOF

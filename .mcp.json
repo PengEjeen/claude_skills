@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "research-mcp": {
+      "command": "python",
+      "args": ["-m", "mcp.research.server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "api-spec",
+  "description": "PM/개발자용 API 명세서, 워크플로우, 기능명세서 자동 생성",
+  "command": {
+    "summary": "Generate API spec, workflow, and feature documentation",
+    "syntax": "/api-spec [target_file_or_feature]",
+    "examples": [
+      "/api-spec backend/routes/multi_excel.py",
+      "/api-spec workflow multi_excel",
+      "/api-spec feature \"다중 엑셀 업로드\"",
+      "/api-spec pm-summary",
+      "/api-spec dev-onboarding"
+    ]
+  }
+}

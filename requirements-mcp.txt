@@ -1,0 +1,7 @@
+# MCP Research Server dependencies (Python >= 3.10)
+fastmcp
+httpx
+beautifulsoup4
+lxml
+pydantic
+opendataloader_pdf

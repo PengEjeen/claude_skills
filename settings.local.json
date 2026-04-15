@@ -1,0 +1,302 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_HARNESS": "enabled",
+    "CLAUDE_SETUP_VERSION": "2.0.0"
+  },
+  "attribution": {},
+  "includeGitInstructions": true,
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(test:*)",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(pytest:*)",
+      "Bash(npx:*)",
+      "Bash(ruff:*)",
+      "Bash(cargo:*)",
+      "Bash(rustc:*)",
+      "Bash(kubectl:*)",
+      "Bash(terraform:*)",
+      "Bash(docker:*)",
+      "Bash(wc:*)",
+      "Bash(iconv:*)",
+      "Bash(tee:*)",
+      "Edit",
+      "Write",
+      "Read",
+      "Grep",
+      "Glob",
+      "WebSearch",
+      "Task",
+      "Skill(react-component)",
+      "Skill(multi-agent)",
+      "Skill(token-analysis)",
+      "Skill(rust)",
+      "mcp__google-maps__search_places",
+      "mcp__notion__notion-search",
+      "mcp__notion__notion-create-pages"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(del:*)",
+      "Bash(format:*)"
+    ],
+    "defaultMode": "default"
+  },
+  "model": "sonnet",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/env-context-injector.sh",
+            "timeout": 5,
+            "statusMessage": "환경 컨텍스트 주입 중..."
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/progress-loader.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/regression-gate.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/env-context-injector.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/dangerous-command-blocker.sh",
+            "timeout": 2
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/pre-commit-security.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/code-quality-gate.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/test-coverage-gate.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/secret-detector.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/dependency-audit.sh",
+            "timeout": 5,
+            "statusMessage": "공급망 보안 감사 중..."
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/trace-logger.sh",
+            "timeout": 3,
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/learning-indexer.sh",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/console-log-warning.sh",
+            "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/prettier-format.sh",
+            "timeout": 10,
+            "statusMessage": "포맷 적용 중..."
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/ruff-format.sh",
+            "timeout": 10,
+            "statusMessage": "Python ruff 적용 중..."
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/tsc-check.sh",
+            "timeout": 30,
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/loop-detector.sh",
+            "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/trace-logger.sh",
+            "timeout": 3,
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/verification-loop.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/observability-metrics.sh",
+            "timeout": 3,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/failure-explainer.sh",
+            "timeout": 5,
+            "statusMessage": "실패 원인 분석 중..."
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/compact-checkpoint.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/worktree-setup.sh",
+            "timeout": 10,
+            "statusMessage": "워크트리 환경 설정 중..."
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/subagent-context.sh",
+            "timeout": 3,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/permission-logger.sh",
+            "timeout": 3,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/dod-checker.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/progress-tracker.sh",
+            "timeout": 5,
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/pre-completion-check.sh",
+            "timeout": 10,
+            "statusMessage": "완료 전 검증 중..."
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/session-learning.sh",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "explanatory-output-style@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true
+  },
+  "skipDangerousModePermissionPrompt": true
+}
