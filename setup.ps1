@@ -1,5 +1,5 @@
 # Claude Code Skills - Automated Setup Script (Windows)
-# This script creates symbolic links for skills, agents, and rules
+# This script creates symbolic links for skills, agents, rules, hooks, and commands
 
 $ErrorActionPreference = "Stop"
 
@@ -32,7 +32,7 @@ Write-Host "Claude Code: $CLAUDE_DIR" -ForegroundColor Green
 Write-Host ""
 
 # Create Claude directories if not exist
-$directories = @("skills", "agents", "rules", "hooks")
+$directories = @("skills", "agents", "rules", "hooks", "commands")
 foreach ($dir in $directories) {
     $path = Join-Path $CLAUDE_DIR $dir
     if (-not (Test-Path $path)) {
@@ -134,6 +134,25 @@ if (Test-Path $hooksDir) {
 }
 
 Write-Host ""
+
+# Install commands
+Write-Host "Installing Commands..." -ForegroundColor Cyan
+$commandsDir = Join-Path $SCRIPT_DIR "commands"
+
+if (Test-Path $commandsDir) {
+    Get-ChildItem $commandsDir -File -Filter "*.md" | ForEach-Object {
+        $target = $_.FullName
+        $link = Join-Path (Join-Path $CLAUDE_DIR "commands") $_.Name
+
+        if (New-SymlinkSafe -Target $target -Link $link) {
+            $successCount++
+        } else {
+            $failCount++
+        }
+    }
+}
+
+Write-Host ""
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "Installation Complete!" -ForegroundColor Green
 Write-Host "Success: $successCount | Failed: $failCount" -ForegroundColor $(if ($failCount -eq 0) { "Green" } else { "Yellow" })
@@ -177,6 +196,9 @@ Write-Host "  ✓ $($installedRules.Count) rules installed" -ForegroundColor Gre
 
 $installedHooks = Get-ChildItem (Join-Path $CLAUDE_DIR "hooks") -ErrorAction SilentlyContinue | Measure-Object
 Write-Host "  ✓ $($installedHooks.Count) hooks installed" -ForegroundColor Green
+
+$installedCommands = Get-ChildItem (Join-Path $CLAUDE_DIR "commands") -ErrorAction SilentlyContinue | Measure-Object
+Write-Host "  ✓ $($installedCommands.Count) commands installed" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan

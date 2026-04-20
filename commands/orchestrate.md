@@ -2,6 +2,17 @@
 
 Sequential agent workflow for complex tasks.
 
+> **Note — this is NOT the 3-agent harness.** `/orchestrate` runs a single-shot agent chain
+> (e.g. `planner → tdd-guide → code-reviewer → security-reviewer`) for a one-off task.
+> For the iterative **Planner / Builder / Evaluator** harness with sprint contracts and gated
+> rounds, use `/run-project` instead (see `commands/run-project.md` and `orchestrator/`).
+>
+> | Use `/orchestrate` when... | Use `/run-project` when... |
+> |---|---|
+> | One feature, one pass, no retry loop | Iterative development with eval-driven retries |
+> | No sprint contract negotiation needed | DoD gate + MCP QA required per round |
+> | Output is the diff itself | Output is a `passed` state after N rounds |
+
 ## Usage
 
 `/orchestrate [workflow-type] [task-description]`

@@ -58,3 +58,6 @@ htmlcov/
 # Traces (internal)
 traces/
 *.jsonl
+
+# artifacts (internal)
+artifacts/history/**

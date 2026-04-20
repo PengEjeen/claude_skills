@@ -7,7 +7,7 @@ Write-Host ""
 
 $CLAUDE_DIR = Join-Path $env:USERPROFILE ".claude"
 
-Write-Host "WARNING: This will remove all symlinks to skills, agents, and rules." -ForegroundColor Yellow
+Write-Host "WARNING: This will remove all symlinks to skills, agents, rules, hooks, and commands." -ForegroundColor Yellow
 Write-Host "The original repository files will NOT be deleted." -ForegroundColor Yellow
 Write-Host ""
 
@@ -40,6 +40,20 @@ Get-ChildItem (Join-Path $CLAUDE_DIR "agents") -Attributes ReparsePoint | ForEac
 Get-ChildItem (Join-Path $CLAUDE_DIR "rules") -Attributes ReparsePoint | ForEach-Object {
     Remove-Item $_.FullName -Force
     Write-Host "  ✓ Removed rule: $($_.Name)" -ForegroundColor Green
+    $removedCount++
+}
+
+# Remove hook symlinks
+Get-ChildItem (Join-Path $CLAUDE_DIR "hooks") -Attributes ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-Item $_.FullName -Force
+    Write-Host "  ✓ Removed hook: $($_.Name)" -ForegroundColor Green
+    $removedCount++
+}
+
+# Remove command symlinks
+Get-ChildItem (Join-Path $CLAUDE_DIR "commands") -Attributes ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-Item $_.FullName -Force
+    Write-Host "  ✓ Removed command: $($_.Name)" -ForegroundColor Green
     $removedCount++
 }
 

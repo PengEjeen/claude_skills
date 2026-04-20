@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code Skills - Automated Setup Script (Linux/macOS)
-# This script creates symbolic links for skills, agents, and rules
+# This script creates symbolic links for skills, agents, rules, hooks, and commands
 
 set -e
 
@@ -26,7 +26,7 @@ echo -e "${GREEN}Claude Code: $CLAUDE_DIR${NC}"
 echo ""
 
 # Create Claude directories if not exist
-for dir in skills agents rules hooks; do
+for dir in skills agents rules hooks commands; do
     if [ ! -d "$CLAUDE_DIR/$dir" ]; then
         echo -e "${YELLOW}Creating directory: $CLAUDE_DIR/$dir${NC}"
         mkdir -p "$CLAUDE_DIR/$dir"
@@ -65,9 +65,9 @@ for skill_dir in "$SCRIPT_DIR/skills"/*; do
     if [ -d "$skill_dir" ]; then
         skill_name=$(basename "$skill_dir")
         if create_symlink "$skill_dir" "$CLAUDE_DIR/skills/$skill_name"; then
-            ((success_count++))
+            ((success_count+=1))
         else
-            ((fail_count++))
+            ((fail_count+=1))
         fi
     fi
 done
@@ -81,9 +81,9 @@ for agent_file in "$SCRIPT_DIR/agents"/*.md; do
     if [ -f "$agent_file" ]; then
         agent_name=$(basename "$agent_file")
         if create_symlink "$agent_file" "$CLAUDE_DIR/agents/$agent_name"; then
-            ((success_count++))
+            ((success_count+=1))
         else
-            ((fail_count++))
+            ((fail_count+=1))
         fi
     fi
 done
@@ -97,9 +97,9 @@ for rule_file in "$SCRIPT_DIR/rules"/*.md; do
     if [ -f "$rule_file" ]; then
         rule_name=$(basename "$rule_file")
         if create_symlink "$rule_file" "$CLAUDE_DIR/rules/$rule_name"; then
-            ((success_count++))
+            ((success_count+=1))
         else
-            ((fail_count++))
+            ((fail_count+=1))
         fi
     fi
 done
@@ -114,9 +114,25 @@ for hook_file in "$SCRIPT_DIR/hooks"/*.sh; do
         hook_name=$(basename "$hook_file")
         if create_symlink "$hook_file" "$CLAUDE_DIR/hooks/$hook_name"; then
             chmod +x "$CLAUDE_DIR/hooks/$hook_name" 2>/dev/null
-            ((success_count++))
+            ((success_count+=1))
         else
-            ((fail_count++))
+            ((fail_count+=1))
+        fi
+    fi
+done
+
+echo ""
+
+# Install commands
+echo -e "${CYAN}Installing Commands...${NC}"
+
+for command_file in "$SCRIPT_DIR/commands"/*.md; do
+    if [ -f "$command_file" ]; then
+        command_name=$(basename "$command_file")
+        if create_symlink "$command_file" "$CLAUDE_DIR/commands/$command_name"; then
+            ((success_count+=1))
+        else
+            ((fail_count+=1))
         fi
     fi
 done
@@ -179,12 +195,14 @@ echo -e "${CYAN}Verifying installation...${NC}"
 skill_count=$(ls -1 "$CLAUDE_DIR/skills" 2>/dev/null | wc -l)
 agent_count=$(ls -1 "$CLAUDE_DIR/agents" 2>/dev/null | wc -l)
 rule_count=$(ls -1 "$CLAUDE_DIR/rules" 2>/dev/null | wc -l)
+command_count=$(ls -1 "$CLAUDE_DIR/commands" 2>/dev/null | wc -l)
 
 echo -e "  ${GREEN}✓${NC} $skill_count skills installed"
 echo -e "  ${GREEN}✓${NC} $agent_count agents installed"
 echo -e "  ${GREEN}✓${NC} $rule_count rules installed"
 hook_count=$(ls -1 "$CLAUDE_DIR/hooks" 2>/dev/null | wc -l)
 echo -e "  ${GREEN}✓${NC} $hook_count hooks installed"
+echo -e "  ${GREEN}✓${NC} $command_count commands installed"
 
 echo ""
 echo -e "${CYAN}Next Steps:${NC}"

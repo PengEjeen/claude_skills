@@ -1,0 +1,25 @@
+# Claude Progress — 2026-04-20 10:28 KST
+
+## State
+- Branch: master
+- Last Commit: ff481d9 feat: add new harness
+
+## Modified (uncommitted)
+.claudeignore
+commands/orchestrate.md
+setup.ps1
+setup.sh
+skills/agent-evaluator/agent-evaluator
+uninstall.ps1
+uninstall.sh
+
+## Staged
+(none)
+
+## Summary
+- Python: 0 files, JS/TS: 0 files, Other: 7 files
+
+
+
+## Recent Activity (last 3 commits)
+ff481d9 feat: add new harness

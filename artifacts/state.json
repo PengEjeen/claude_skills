@@ -1,0 +1,17 @@
+{
+  "project": "test",
+  "round": 1,
+  "status": "planned",
+  "goal": "Implement feature X",
+  "focus": ["initial implementation"],
+  "budget": {
+    "max_rounds": 3,
+    "remaining_rounds": 3,
+    "mode": "balanced"
+  },
+  "last_eval": {
+    "result": "fail",
+    "score": 0
+  },
+  "updated_at": "2026-04-17T00:00:00Z"
+}
