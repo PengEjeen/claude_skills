@@ -1,6 +1,6 @@
 # Protect critical configuration files from unreviewed changes
-CLAUDE.md @hyunseung1119
-settings.local.json @hyunseung1119
-rules/ @hyunseung1119
-hooks/ @hyunseung1119
-agents/ @hyunseung1119
+CLAUDE.md @chony5093
+settings.local.json @chony5093
+rules/ @chony5093
+hooks/ @chony5093
+agents/ @chony5093
