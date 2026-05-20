@@ -31,10 +31,23 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 MODE="advisory"
 CONTENT=""
 DIFF_CONTEXT=""
+COVERAGE_CONFIG_CONTENT=""
+FILE_PATH=""
+
+is_coverage_config_path() {
+  case "$1" in
+    package.json|*/package.json|jest.config.*|*/jest.config.*|vitest.config.*|*/vitest.config.*|pyproject.toml|*/pyproject.toml|.coveragerc|*/.coveragerc) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 case "$TOOL_NAME" in
   Edit|Write)
+    FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
     CONTENT=$(printf '%s' "$INPUT" | jq -r '.tool_input.new_string // .tool_input.content // empty' 2>/dev/null)
+    if is_coverage_config_path "$FILE_PATH"; then
+      COVERAGE_CONFIG_CONTENT="$CONTENT"
+    fi
     ;;
   Bash)
     if ! printf '%s' "$COMMAND" | grep -Eq '(^|[;&[:space:]])git[[:space:]]+commit([[:space:]]|$)'; then
@@ -46,6 +59,12 @@ case "$TOOL_NAME" in
     MODE="blocking"
     DIFF_CONTEXT=$(git diff --cached --no-ext-diff --unified=0 2>/dev/null)
     CONTENT=$(printf '%s\n' "$DIFF_CONTEXT" | grep '^+' | grep -v '^+++' || true)
+    while IFS= read -r changed_file; do
+      if is_coverage_config_path "$changed_file"; then
+        COVERAGE_CONFIG_CONTENT="${COVERAGE_CONFIG_CONTENT}
+$(git diff --cached --no-ext-diff --unified=0 -- "$changed_file" 2>/dev/null | grep '^+' | grep -v '^+++' || true)"
+      fi
+    done < <(git diff --cached --name-only 2>/dev/null)
     ;;
   *)
     exit 0
@@ -85,7 +104,10 @@ detect_pattern "focused-test" '(^|[^[:alnum:]_])(test|it|describe)\.only[[:space
 detect_pattern "ts-ignore" '@ts-ignore|@ts-nocheck' "TypeScript checking was suppressed" "high"
 detect_pattern "lint-disable" 'eslint-disable|biome-ignore' "Lint or formatter checks were suppressed" "medium"
 detect_pattern "explicit-any" '(^|[^[:alnum:]_])as[[:space:]]+any([^[:alnum:]_]|$)|:[[:space:]]*any([^[:alnum:]_]|$)' "Explicit any type was added" "medium"
-detect_pattern "coverage-threshold" 'coverageThreshold|threshold|branches|functions|lines|statements|fail-under|--cov-fail-under' "Coverage threshold configuration changed; verify it was not lowered" "high"
+detect_pattern "coverage-threshold" 'coverageThreshold|fail-under|--cov-fail-under|cov-fail-under' "Coverage threshold configuration changed; verify it was not lowered" "high"
+if [ -n "$COVERAGE_CONFIG_CONTENT" ] && printf '%s\n' "$COVERAGE_CONFIG_CONTENT" | grep -Eq '"?(branches|functions|lines|statements)"?[[:space:]]*:'; then
+  add_finding "coverage-threshold" "Coverage threshold configuration changed; verify it was not lowered" "high"
+fi
 detect_pattern "weak-assertion" '\.toBeTruthy[[:space:]]*\(|\.toBeDefined[[:space:]]*\(|\.not\.toThrow[[:space:]]*\(' "Potentially weak assertion was added" "low"
 
 if [ "$TOOL_NAME" = "Bash" ] && [ -n "$DIFF_CONTEXT" ]; then
@@ -115,9 +137,20 @@ EOF
   done | jq -s .
 )
 
-if [ "$MODE" = "blocking" ]; then
+HAS_HIGH=false
+for entry in "${FINDINGS[@]}"; do
+  IFS=$'\t' read -r _pattern _message severity <<EOF
+$entry
+EOF
+  if [ "$severity" = "high" ]; then
+    HAS_HIGH=true
+    break
+  fi
+done
+
+if [ "$MODE" = "blocking" ] && [ "$HAS_HIGH" = true ]; then
   DECISION="block"
-  SUMMARY="blocking findings detected before commit"
+  SUMMARY="high severity findings detected before commit"
 else
   DECISION="approve"
   SUMMARY="warning: possible verification weakening detected"

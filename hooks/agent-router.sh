@@ -7,7 +7,21 @@ INPUT=$(</dev/stdin)
 
 skipped() {
   local reason="$1"
-  printf '{"decision":"approve","reason":"[Agent Router] skipped: %s","harness":{"component":"agent-router","score":0,"domains":[],"recommended_agents":[],"verification_required":false}}\n' "$reason"
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg reason "$reason" '{
+      decision: "approve",
+      reason: ("[Agent Router] skipped: " + $reason),
+      harness: {
+        component: "agent-router",
+        score: 0,
+        domains: [],
+        recommended_agents: [],
+        verification_required: false
+      }
+    }'
+  else
+    printf '{"decision":"approve","reason":"[Agent Router] skipped: jq unavailable","harness":{"component":"agent-router","score":0,"domains":[],"recommended_agents":[],"verification_required":false}}\n'
+  fi
   exit 0
 }
 
@@ -78,7 +92,7 @@ RISK_LEVEL="low"
 VERIFICATION_REQUIRED=false
 
 DOCS_ONLY=false
-if contains_any "$PROMPT_LC" "docs" "doc" "documentation" "readme" "changelog" "guide" "문서" "문서화"; then
+if contains_any "$PROMPT_LC" "docs" "documentation" "readme" "changelog" "guide" "문서" "문서화"; then
   DOCS_ONLY=true
 fi
 
@@ -87,21 +101,21 @@ if contains_any "$PROMPT_LC" "implement" "add" "fix" "refactor" "change" "modify
   HAS_CODE_INTENT=true
 fi
 
-if contains_any "$PROMPT_LC" "auth" "login" "token" "session" "jwt" "oauth" "permission" "role"; then
+if contains_any "$PROMPT_LC" "auth" "login" "token" "session" "jwt" "oauth" "permission" "role" "인증" "로그인" "권한" "세션" "토큰"; then
   add_domain "auth"
   add_agent "security-reviewer"
   SCORE=$((SCORE + 5))
   RISK_LEVEL="high"
 fi
 
-if contains_any "$PROMPT_LC" "database" "migration" "sql" "postgres" "supabase" "schema" "rls"; then
+if contains_any "$PROMPT_LC" "database" "migration" "sql" "postgres" "supabase" "schema" "rls" "데이터베이스" "마이그레이션" "스키마" "쿼리"; then
   add_domain "db"
   add_agent "database-reviewer"
   SCORE=$((SCORE + 5))
   RISK_LEVEL="high"
 fi
 
-if contains_any "$PROMPT_LC" "docker" "kubernetes" "k8s" "terraform" "ci/cd" "deploy" "infra"; then
+if contains_any "$PROMPT_LC" "docker" "kubernetes" "k8s" "terraform" "ci/cd" "deploy" "infra" "배포" "인프라" "도커" "쿠버네티스"; then
   add_domain "infra"
   add_agent "infrastructure-agent"
   SCORE=$((SCORE + 5))

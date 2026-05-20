@@ -94,6 +94,34 @@ has_pytest_tests() {
   find . -maxdepth 4 \( -name "test_*.py" -o -name "*_test.py" \) 2>/dev/null | head -1 | grep -q .
 }
 
+detect_package_manager() {
+  local package_dir="$1"
+
+  if [ -f "$package_dir/pnpm-lock.yaml" ]; then
+    printf 'pnpm\n'
+  elif [ -f "$package_dir/yarn.lock" ]; then
+    printf 'yarn\n'
+  elif [ -f "$package_dir/bun.lock" ] || [ -f "$package_dir/bun.lockb" ]; then
+    printf 'bun\n'
+  elif [ -f "$package_dir/package-lock.json" ]; then
+    printf 'npm\n'
+  else
+    printf 'npm\n'
+  fi
+}
+
+script_command() {
+  local package_manager="$1"
+  local script_name="$2"
+
+  case "$package_manager" in
+    pnpm) printf 'pnpm %s\n' "$script_name" ;;
+    yarn) printf 'yarn %s\n' "$script_name" ;;
+    bun) printf 'bun run %s\n' "$script_name" ;;
+    *) printf 'npm run %s\n' "$script_name" ;;
+  esac
+}
+
 file_lc=$(printf '%s' "$FILE_PATH" | tr '[:upper:]' '[:lower:]')
 basename_lc=$(basename "$file_lc")
 ext="${file_lc##*.}"
@@ -104,12 +132,22 @@ case "$file_lc" in
     set_risk "medium"
     package_json=$(find_up "$dirname_path" "package.json" || true)
     if [ -n "$package_json" ]; then
+      package_dir=$(dirname "$package_json")
+      package_manager=$(detect_package_manager "$package_dir")
       if jq -e '.scripts.typecheck? // empty' "$package_json" >/dev/null 2>&1; then
-        add_check "TypeScript typecheck" "npm run typecheck" "true"
+        add_check "TypeScript typecheck" "$(script_command "$package_manager" "typecheck")" "true"
       fi
       if jq -e '.scripts.test? // empty' "$package_json" >/dev/null 2>&1; then
-        add_check "JavaScript test suite" "npm test" "true"
+        add_check "JavaScript test suite" "$(script_command "$package_manager" "test")" "true"
       fi
+      if jq -e '.scripts.lint? // empty' "$package_json" >/dev/null 2>&1; then
+        add_check "JavaScript lint" "$(script_command "$package_manager" "lint")" "false"
+      fi
+      if jq -e '.scripts.build? // empty' "$package_json" >/dev/null 2>&1; then
+        add_check "JavaScript build" "$(script_command "$package_manager" "build")" "false"
+      fi
+    else
+      add_manual_check "package.json not found; verify typecheck/test command manually"
     fi
     if printf '%s' "$file_lc" | grep -Eq 'auth|session|token|permission'; then
       set_risk "high"

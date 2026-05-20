@@ -1,0 +1,7 @@
+{
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "src/report.ts",
+    "new_string": "const lines = report.split('\\n'); const functions = registry.list();"
+  }
+}

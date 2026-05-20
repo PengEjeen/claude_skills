@@ -32,4 +32,9 @@ docs_output="$(run_hook "$FIXTURES/agent-router-docs.json")"
 printf '%s' "$docs_output" | jq -e '.decision == "approve"' >/dev/null
 printf '%s' "$docs_output" | jq -e '(.harness.recommended_agents | length == 0) or (.reason | test("no subagent|agents=none"; "i"))' >/dev/null
 
+ko_output="$(run_hook "$FIXTURES/agent-router-ko-auth-debug.json")"
+printf '%s' "$ko_output" | jq -e '.decision == "approve"' >/dev/null
+printf '%s' "$ko_output" | jq -e '.harness.recommended_agents | index("security-reviewer") != null' >/dev/null
+printf '%s' "$ko_output" | jq -e '.harness.recommended_agents | index("debugger") != null' >/dev/null
+
 echo "test-agent-router: OK"
