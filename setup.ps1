@@ -159,6 +159,14 @@ Write-Host "Success: $successCount | Failed: $failCount" -ForegroundColor $(if (
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 
+Write-Host "Claude Code Runtime Settings" -ForegroundColor Cyan
+Write-Host "This Windows installer links skills/rules/hooks/commands only." -ForegroundColor Yellow
+Write-Host "To merge settings.local.json into Claude Code runtime settings, use bash/WSL:" -ForegroundColor Yellow
+Write-Host "  bash scripts/install-settings.sh --dry-run" -ForegroundColor Gray
+Write-Host "  bash scripts/install-settings.sh --yes" -ForegroundColor Gray
+Write-Host "Rollback: copy ~/.claude/settings.json.bak.<timestamp> back to ~/.claude/settings.json" -ForegroundColor Gray
+Write-Host ""
+
 # Check Python dependencies
 $pythonSkills = @("product-planner", "llm-app-planner")
 $hasPython = Get-Command python -ErrorAction SilentlyContinue

@@ -1,7 +1,7 @@
 # My Claude Code Settings
 
 Claude Code CLI를 위한 종합 하네스 엔지니어링 저장소.
-**36개 스킬, 24개 에이전트, 38개 커맨드, 17개 규칙, 32개 훅 스크립트**를 포함합니다.
+**36개 스킬, 24개 에이전트, 40개 커맨드, 17개 규칙, 32개 훅 스크립트**를 포함합니다.
 
 > **core-harness-v1** — Agent Router, Verification Planner, Test Integrity Gate를 추가해
 > 자동 실행이 아닌 advisory-first 라우팅과 검증 계획을 제공합니다.
@@ -94,6 +94,8 @@ Session End
 - `/route <request>`: 요청을 agent-router 기준으로 분류하고 추천 agent만 출력합니다.
 - `/verify-plan [files|staged|all]`: 변경 파일 기준 검증 계획을 요약합니다.
 - `/test-hooks`: 신규 훅 fixture 테스트 실행법을 확인합니다.
+- `/install-settings`: `settings.local.json`을 실제 Claude Code 런타임 설정인 `~/.claude/settings.json`에 병합하는 절차를 확인합니다.
+- `/check-harness`: Claude Code가 core-harness-v1 훅을 실제로 읽는지 점검합니다.
 
 기본 원칙:
 
@@ -101,6 +103,15 @@ Session End
 - advisory 훅은 무거운 테스트를 실행하지 않고 계획/경고만 출력합니다.
 - `test-integrity-gate.sh`는 Edit/Write 중에는 경고만 출력하지만, `git commit` 전 staged diff에서 검증 약화 패턴을 발견하면 block할 수 있습니다.
 - 자세한 성능 기준은 `rules/harness-performance.md`를 따릅니다.
+
+런타임 settings 적용:
+
+```bash
+scripts/install-settings.sh --dry-run
+scripts/install-settings.sh --yes
+```
+
+`setup.sh`는 symlink 설치 후 interactive shell에서 `~/.claude/settings.json` 병합 여부를 묻습니다. 기존 runtime settings는 백업 후 merge하며, hook command 중복은 건너뜁니다.
 
 ---
 
@@ -135,7 +146,7 @@ Session End
 │
 ├── skills/ (36개)               ← 전문 스킬 (/skill-name으로 활성화)
 ├── agents/ (24개)               ← 특화 서브 에이전트
-├── commands/ (38개)             ← CLI 커맨드 (/command-name)
+├── commands/ (40개)             ← CLI 커맨드 (/command-name)
 └── progress/                    ← 세션 상태 관리
     ├── README.md
     └── SCHEMA.md                ← claude-progress.txt 스키마 ★
@@ -149,7 +160,7 @@ Session End
 |------|------|------|
 | **Rules** | 17 | ALWAYS 3개 + on-demand 규칙 + core-harness-v1 라우팅/검증/성능 규칙 |
 | **Hooks** | 32 | 11-Event 파이프라인 + core-harness-v1 신규 훅 3개 |
-| **Commands** | 38 | `/plan`, `/tdd`, `/verify`, `/tool-registry`, `/route`, `/verify-plan`, `/test-hooks` 등 |
+| **Commands** | 40 | `/plan`, `/tdd`, `/verify`, `/tool-registry`, `/route`, `/verify-plan`, `/test-hooks`, `/install-settings`, `/check-harness` 등 |
 | **Agents** | 24 | Core 7 + Quality 10 + Domain 4 + Meta 3 |
 | **Skills** | 36 | 기획, 개발, AI, 문서, 품질, QA |
 | **MCP** | 3 | Context7, GitHub, Playwright |

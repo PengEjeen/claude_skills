@@ -148,6 +148,32 @@ echo -e "Success: $success_count | Failed: $fail_count"
 echo -e "${CYAN}==================================================${NC}"
 echo ""
 
+# Runtime settings install (optional, interactive only)
+if [ -t 0 ] && [ -t 1 ]; then
+    echo -e "${CYAN}Claude Code Runtime Settings${NC}"
+    echo -e "${NC}This repository ships hook wiring in settings.local.json.${NC}"
+    echo -e "${NC}Claude Code reads runtime hooks from ~/.claude/settings.json.${NC}"
+    read -r -p "Install Claude Code runtime settings to ~/.claude/settings.json? (y/N) " install_settings
+    case "$install_settings" in
+        y|Y|yes|YES)
+            if [ -x "$SCRIPT_DIR/scripts/install-settings.sh" ]; then
+                "$SCRIPT_DIR/scripts/install-settings.sh" --yes
+            else
+                bash "$SCRIPT_DIR/scripts/install-settings.sh" --yes
+            fi
+            ;;
+        *)
+            echo -e "${YELLOW}Skipped runtime settings install.${NC}"
+            echo -e "${NC}Run later: scripts/install-settings.sh --dry-run && scripts/install-settings.sh --yes${NC}"
+            ;;
+    esac
+    echo ""
+else
+    echo -e "${YELLOW}Non-interactive shell detected. Skipping runtime settings install.${NC}"
+    echo -e "${NC}Run manually: scripts/install-settings.sh --dry-run && scripts/install-settings.sh --yes${NC}"
+    echo ""
+fi
+
 # Install MCP Research Server dependencies
 echo -e "${CYAN}Installing MCP Research Server...${NC}"
 MCP_REQ="$SCRIPT_DIR/requirements-mcp.txt"
