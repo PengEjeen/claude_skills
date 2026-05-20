@@ -1,7 +1,10 @@
 # My Claude Code Settings
 
 Claude Code CLI를 위한 종합 하네스 엔지니어링 저장소.
-**36개 스킬, 24개 에이전트, 31개 커맨드, 13개 규칙, 29개 훅 스크립트**를 포함합니다.
+**36개 스킬, 24개 에이전트, 38개 커맨드, 17개 규칙, 32개 훅 스크립트**를 포함합니다.
+
+> **core-harness-v1** — Agent Router, Verification Planner, Test Integrity Gate를 추가해
+> 자동 실행이 아닌 advisory-first 라우팅과 검증 계획을 제공합니다.
 
 > **최신 업데이트: 2026-04-02** — 하네스 v7: 29개 훅 (11-Event), CLAUDE.md 최적화 (51→24 lines), 4개 신규 이벤트 훅 (MainAgentTokenDepletion, WorktreeCreate, SubagentStart, PermissionDenied), Reasoning Budget 정정 (xhigh→high)
 
@@ -76,6 +79,31 @@ Session End
 
 ---
 
+## core-harness-v1 사용법
+
+`core-harness-v1`은 세 개의 경량 훅을 추가합니다.
+
+| 훅 | 이벤트 | Timeout | 모드 |
+|----|--------|---------|------|
+| `agent-router.sh` | UserPromptSubmit | 3s | advisory |
+| `verification-planner.sh` | PostToolUse Edit/Write | 5s | advisory |
+| `test-integrity-gate.sh` | PreToolUse Edit/Write, Bash(git commit*) | 3s | advisory + commit blocking |
+
+보조 커맨드:
+
+- `/route <request>`: 요청을 agent-router 기준으로 분류하고 추천 agent만 출력합니다.
+- `/verify-plan [files|staged|all]`: 변경 파일 기준 검증 계획을 요약합니다.
+- `/test-hooks`: 신규 훅 fixture 테스트 실행법을 확인합니다.
+
+기본 원칙:
+
+- 신규 훅은 fail-open을 기본으로 합니다.
+- advisory 훅은 무거운 테스트를 실행하지 않고 계획/경고만 출력합니다.
+- `test-integrity-gate.sh`는 Edit/Write 중에는 경고만 출력하지만, `git commit` 전 staged diff에서 검증 약화 패턴을 발견하면 block할 수 있습니다.
+- 자세한 성능 기준은 `rules/harness-performance.md`를 따릅니다.
+
+---
+
 ## 프로젝트 구조
 
 ```
@@ -88,7 +116,7 @@ Session End
 ├── setup.sh / setup.ps1         ← 설치 스크립트
 ├── uninstall.sh / uninstall.ps1 ← 제거 스크립트
 │
-├── hooks/ (29개)                ← 하네스 미들웨어 훅 스크립트
+├── hooks/ (32개)                ← 하네스 미들웨어 훅 스크립트
 │   ├── 안전: dangerous-command-blocker, secret-detector, pre-commit-security
 │   ├── 품질: console-log-warning, prettier, tsc, ruff, code-quality-gate
 │   ├── 검증: verification-loop, test-coverage-gate, regression-gate ★
@@ -98,7 +126,7 @@ Session End
 │   ├── 분석: failure-explainer, loop-detector, dod-checker, compact-checkpoint, session-learning
 │   └── 유틸: trace-analyzer (수동 실행 전용, 훅 미배선)
 │
-├── rules/ (13개)                ← AI 행동 규칙
+├── rules/ (17개)                ← AI 행동 규칙
 │   ├── ALWAYS: workflow.md, harness-engineering.md, defaults.md
 │   ├── 에이전트: agents.md (24개 오케스트레이션 + Tool Strategy)
 │   ├── 코드: coding-style.md, testing.md, security.md, git-workflow.md
@@ -107,7 +135,7 @@ Session End
 │
 ├── skills/ (36개)               ← 전문 스킬 (/skill-name으로 활성화)
 ├── agents/ (24개)               ← 특화 서브 에이전트
-├── commands/ (31개)             ← CLI 커맨드 (/command-name)
+├── commands/ (38개)             ← CLI 커맨드 (/command-name)
 └── progress/                    ← 세션 상태 관리
     ├── README.md
     └── SCHEMA.md                ← claude-progress.txt 스키마 ★
@@ -119,9 +147,9 @@ Session End
 
 | 항목 | 수량 | 설명 |
 |------|------|------|
-| **Rules** | 13 | ALWAYS 3개 + on-demand 10개 |
-| **Hooks** | 29 | 11-Event 파이프라인 (SessionStart 3, UserPromptSubmit 1, PreToolUse 5, PostToolUse 10, PostToolUseFailure 1, PostCompact 1, MainAgentTokenDepletion 1, WorktreeCreate 1, SubagentStart 1, PermissionDenied 1, Stop 4) |
-| **Commands** | 31 | `/plan`, `/tdd`, `/verify`, `/tool-registry` 등 |
+| **Rules** | 17 | ALWAYS 3개 + on-demand 규칙 + core-harness-v1 라우팅/검증/성능 규칙 |
+| **Hooks** | 32 | 11-Event 파이프라인 + core-harness-v1 신규 훅 3개 |
+| **Commands** | 38 | `/plan`, `/tdd`, `/verify`, `/tool-registry`, `/route`, `/verify-plan`, `/test-hooks` 등 |
 | **Agents** | 24 | Core 7 + Quality 10 + Domain 4 + Meta 3 |
 | **Skills** | 36 | 기획, 개발, AI, 문서, 품질, QA |
 | **MCP** | 3 | Context7, GitHub, Playwright |
@@ -129,7 +157,7 @@ Session End
 
 ---
 
-## 훅 파이프라인 (29개)
+## 훅 파이프라인 (32개)
 
 ### SessionStart (3)
 | 훅 | 역할 |
@@ -138,21 +166,24 @@ Session End
 | `progress-loader.sh` | 이전 세션 상태 로드 |
 | `regression-gate.sh` | 이전 실패 테스트 회귀 검사 (24h TTL) |
 
-### UserPromptSubmit (1)
+### UserPromptSubmit (2)
 | 훅 | 역할 |
 |----|------|
 | `env-context-injector.sh` | 세션 컨텍스트 재주입 fallback (SessionStart 미실행 시) |
+| `agent-router.sh` | 사용자 요청 분석 후 task/risk/domain/recommended agent advisory 출력 |
 
-### PreToolUse (5)
+### PreToolUse (7)
 | 훅 | 매처 | 역할 |
 |----|------|------|
 | `dangerous-command-blocker.sh` | Bash | rm -rf, git push --force 등 차단 |
 | `pre-commit-security.sh` | git commit | staged diff 시크릿 검사 |
+| `test-integrity-gate.sh` | Edit/Write | 테스트/타입/커버리지 약화 패턴 advisory warning |
+| `test-integrity-gate.sh` | git commit | staged diff의 검증 약화 패턴 차단 |
 | `code-quality-gate.sh` | git commit | merge conflict, TODO/FIXME, 대용량 변경 |
 | `test-coverage-gate.sh` | git commit | **80% 미만 커버리지 차단** ★ |
 | `secret-detector.sh` | Edit/Write | 14개 provider 패턴 감지 |
 
-### PostToolUse (10)
+### PostToolUse (11)
 | 훅 | 역할 |
 |----|------|
 | `dependency-audit.sh` | npm/pip 패키지 보안 검사 |
@@ -162,6 +193,7 @@ Session End
 | `ruff-format.sh` | Python lint + format |
 | `loop-detector.sh` | 동일 파일 4회+ 편집 doom loop 경고 |
 | `trace-logger.sh` | 도구 호출 JSONL 기록 |
+| `verification-planner.sh` | 변경 파일 유형별 검증 계획 advisory JSON 출력 |
 | `verification-loop.sh` | **코드 변경 후 관련 테스트 자동 실행** ★ |
 | `observability-metrics.sh` | **메트릭 수집 (도구 사용량, 성공률)** ★ |
 | `learning-indexer.sh` | **학습 패턴 자동 인덱싱** ★ |

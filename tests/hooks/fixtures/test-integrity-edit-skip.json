@@ -1,0 +1,7 @@
+{
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "src/auth/session.test.ts",
+    "new_string": "test.skip(\"refreshes session token\", () => {})"
+  }
+}

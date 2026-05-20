@@ -82,6 +82,11 @@
             "type": "command",
             "command": "bash ~/.claude/hooks/env-context-injector.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/agent-router.sh",
+            "timeout": 3
           }
         ]
       }
@@ -107,6 +112,11 @@
           },
           {
             "type": "command",
+            "command": "bash ~/.claude/hooks/test-integrity-gate.sh",
+            "timeout": 3
+          },
+          {
+            "type": "command",
             "command": "bash ~/.claude/hooks/code-quality-gate.sh",
             "timeout": 10
           },
@@ -124,6 +134,11 @@
             "type": "command",
             "command": "bash ~/.claude/hooks/secret-detector.sh",
             "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/test-integrity-gate.sh",
+            "timeout": 3
           }
         ]
       }
@@ -188,6 +203,11 @@
             "command": "bash ~/.claude/hooks/trace-logger.sh",
             "timeout": 3,
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/verification-planner.sh",
+            "timeout": 5
           },
           {
             "type": "command",

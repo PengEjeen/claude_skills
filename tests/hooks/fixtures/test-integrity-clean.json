@@ -1,0 +1,7 @@
+{
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "src/auth/session.ts",
+    "new_string": "export const sessionTTL = 3600;"
+  }
+}
