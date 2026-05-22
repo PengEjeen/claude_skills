@@ -64,10 +64,16 @@ for run_dir in "${run_dirs[@]}"; do
   require_file "$run_dir/01_user_goal.md" || continue
   require_file "$run_dir/02_pm_contract.md" || continue
   require_file "$run_dir/03_plan.md" || continue
-  require_file "$run_dir/05_backend_output.md" || continue
   require_file "$run_dir/06_reviewer_report.md" || continue
   require_file "$run_dir/07_qa_report.md" || continue
   require_file "$run_dir/08_decision.md" || continue
+
+  output_files=("$run_dir"/05_*_output.md)
+  if [ "${#output_files[@]}" -ne 1 ]; then
+    fail "$run_name expected exactly one 05_*_output.md file, found ${#output_files[@]}"
+    continue
+  fi
+  output_file="${output_files[0]}"
 
   handoff_files=("$run_dir"/*handoff*.json)
   if [ "${#handoff_files[@]}" -ne 1 ]; then
@@ -90,17 +96,17 @@ for run_dir in "${run_dirs[@]}"; do
   task_goal=$(extract_md_field "$run_dir/01_user_goal.md" task_id)
   task_pm=$(extract_md_field "$run_dir/02_pm_contract.md" task_id)
   task_plan=$(extract_md_field "$run_dir/03_plan.md" task_id)
-  task_backend=$(extract_md_field "$run_dir/05_backend_output.md" task_id)
+  task_output=$(extract_md_field "$output_file" task_id)
   task_review=$(extract_md_field "$run_dir/06_reviewer_report.md" task_id)
   task_qa=$(extract_md_field "$run_dir/07_qa_report.md" task_id)
   task_decision=$(extract_md_field "$run_dir/08_decision.md" task_id)
   task_handoff=$(jq -r '.task_id' "$handoff")
 
-  for t in "$task_goal" "$task_pm" "$task_plan" "$task_backend" "$task_review" "$task_qa" "$task_decision" "$task_handoff"; do
+  for t in "$task_goal" "$task_pm" "$task_plan" "$task_output" "$task_review" "$task_qa" "$task_decision" "$task_handoff"; do
     [ -n "$t" ] || fail "$run_name has empty task_id in one or more artifacts"
   done
 
-  if [ "$task_pm" != "$task_handoff" ] || [ "$task_goal" != "$task_handoff" ] || [ "$task_plan" != "$task_handoff" ] || [ "$task_backend" != "$task_handoff" ] || [ "$task_review" != "$task_handoff" ] || [ "$task_qa" != "$task_handoff" ] || [ "$task_decision" != "$task_handoff" ]; then
+  if [ "$task_pm" != "$task_handoff" ] || [ "$task_goal" != "$task_handoff" ] || [ "$task_plan" != "$task_handoff" ] || [ "$task_output" != "$task_handoff" ] || [ "$task_review" != "$task_handoff" ] || [ "$task_qa" != "$task_handoff" ] || [ "$task_decision" != "$task_handoff" ]; then
     fail "$run_name task_id mismatch across artifacts"
   fi
 
