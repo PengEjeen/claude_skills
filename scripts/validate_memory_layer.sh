@@ -29,6 +29,8 @@ require_text() {
   grep -Eq "$pattern" "$ROOT/$path" || fail "$path missing pattern: $pattern"
 }
 
+# Git only tracks directories that contain files. This validator checks the
+# tracked baseline layer; dry-run-specific directories can be added later.
 require_dir memories
 require_dir memories/local
 require_dir memories/shared
@@ -37,8 +39,6 @@ require_dir memories/shared/handoffs
 require_dir memories/shared/artifacts
 require_dir memories/shared/reviews
 require_dir memories/shared/qa
-require_dir memories/shared/decisions
-require_dir memories/shared/runs
 require_dir memories/shared/schemas
 require_dir memories/shared/checklists
 
