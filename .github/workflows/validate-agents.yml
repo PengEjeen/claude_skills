@@ -7,9 +7,12 @@ on:
       - 'hooks/agent-router.sh'
       - 'rules/agents.md'
       - 'rules/agent-handoff-contract.md'
+      - 'rules/artifact-memory.md'
       - 'rules/mcp-agent-policy.md'
+      - 'memories/**'
       - 'scripts/validate_agent_contracts.sh'
       - 'scripts/test_agent_router.sh'
+      - 'scripts/validate_memory_layer.sh'
       - '.github/workflows/validate-agents.yml'
   pull_request:
     paths:
@@ -17,9 +20,12 @@ on:
       - 'hooks/agent-router.sh'
       - 'rules/agents.md'
       - 'rules/agent-handoff-contract.md'
+      - 'rules/artifact-memory.md'
       - 'rules/mcp-agent-policy.md'
+      - 'memories/**'
       - 'scripts/validate_agent_contracts.sh'
       - 'scripts/test_agent_router.sh'
+      - 'scripts/validate_memory_layer.sh'
       - '.github/workflows/validate-agents.yml'
 
 jobs:
@@ -34,3 +40,6 @@ jobs:
 
       - name: Test agent router
         run: bash scripts/test_agent_router.sh
+
+      - name: Validate memory layer
+        run: bash scripts/validate_memory_layer.sh
