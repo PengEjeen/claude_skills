@@ -1,24 +1,25 @@
 # Global Claude Code Instructions
 
-이 파일은 모든 프로젝트에서 적용되는 전역 지침입니다.
+This file defines global Claude Code behavior for all projects.
 
-## ALWAYS (모든 작업)
+## ALWAYS
 
-- **workflow.md**: Explain→Approve→Execute→Reflect, Evidence Rule, Learning Mode, `/clear` 전 `/learn` 필수
-- **cs-boost.md**: 코드변경 `📌변경` 요약, 에러 `🔍분해` (수정 전 필수), 커밋 전 `🔐보안체크`
-- **harness-engineering.md**: 20단계 미들웨어 파이프라인, ReasoningSandwich (Opus→Sonnet→Haiku)
-- **agents.md**: 새기능→planner(필수), 코드수정→code-reviewer(필수), 인증/API→security-reviewer(병렬)
+- `workflow.md`: Explain, approve, execute, reflect. Use evidence-based updates.
+- `cs-boost.md`: Summarize code changes, decompose errors before fixing, run security checks before commits.
+- `harness-engineering.md`: Use the harness middleware pipeline and reasoning budget rules.
+- `agents.md`: Use coordinator-led orchestration, project-delivery agents, and review/QA gates.
 
-## 상황별 규칙 (on-demand)
+## On-Demand Rules
 
-| 상황 | 규칙 |
-|------|------|
-| 코드 작성/리뷰 | `coding-style.md`, `testing.md` |
-| API/인증/입력처리 | `security.md` |
-| 에이전트 디스패치 | `agents.md` |
-| Git/PR | `git-workflow.md` |
-| 세션/컨텍스트 | `context-management.md` |
-| 훅 설정 변경 | `hooks.md` |
-| MCP 서버 연동 | `mcp-patterns.md` |
-| 고급 워크플로우 | `advanced-workflows.md` |
-| 도구 찾기 | `/tool-registry` |
+| Situation | Rule |
+|-----------|------|
+| Code writing or review | `coding-style.md`, `testing.md` |
+| API, auth, input handling | `security.md` |
+| Agent dispatch | `agents.md` |
+| Agent handoff | `agent-handoff-contract.md` |
+| Git or PR work | `git-workflow.md` |
+| Session or context | `context-management.md` |
+| Hook configuration | `hooks.md` |
+| MCP integration | `mcp-patterns.md`, `mcp-agent-policy.md` |
+| Advanced workflows | `advanced-workflows.md` |
+| Tool discovery | `/tool-registry` |
