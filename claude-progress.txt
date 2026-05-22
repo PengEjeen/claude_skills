@@ -1,25 +1,21 @@
-# Claude Progress — 2026-04-20 10:28 KST
+# Claude Progress — 2026-05-20 16:45 KST
 
 ## State
 - Branch: master
-- Last Commit: ff481d9 feat: add new harness
+- Last Commit: 7d1fae9 feat: v1-beta로 승급
 
 ## Modified (uncommitted)
-.claudeignore
-commands/orchestrate.md
-setup.ps1
-setup.sh
-skills/agent-evaluator/agent-evaluator
-uninstall.ps1
-uninstall.sh
+(none)
 
 ## Staged
 (none)
 
 ## Summary
-- Python: 0 files, JS/TS: 0 files, Other: 7 files
+- Python: 0 files, JS/TS: 0 files, Other: 1 files
 
 
 
 ## Recent Activity (last 3 commits)
-ff481d9 feat: add new harness
+7d1fae9 feat: v1-beta로 승급
+bc3d1b2 feat: v1-beta로 승급
+afef924 feat: 추가구조 개선
