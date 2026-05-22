@@ -15,6 +15,11 @@ if [ ! -d "$RUNS_DIR" ]; then
   exit 2
 fi
 
+if [ ! -f "$VALIDATOR" ]; then
+  echo "[ERROR] dry-run validator not found: $VALIDATOR" >&2
+  exit 2
+fi
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "[ERROR] jq is required" >&2
   exit 2
@@ -49,6 +54,14 @@ validation_for_run() {
   fi
 }
 
+mapfile -t run_dirs < <(find "$RUNS_DIR" -mindepth 1 -maxdepth 2 -type d -name '*dry-run*' | sort)
+
+if [ "${#run_dirs[@]}" -eq 0 ]; then
+  echo "[ERROR] no dry-run directories found under $RUNS_DIR" >&2
+  echo "[HINT] expected a directory like memories/shared/runs/2026-04-29-dry-run-001" >&2
+  exit 2
+fi
+
 {
   echo "# Dry-Run Observability Report"
   echo
@@ -59,15 +72,7 @@ validation_for_run() {
 } > "$MD_OUT"
 : > "$JSONL_OUT"
 
-shopt -s nullglob
-run_dirs=("$RUNS_DIR"/*dry-run*)
-
-if [ "${#run_dirs[@]}" -eq 0 ]; then
-  echo "[WARN] no dry-run directories found" >&2
-fi
-
 for run_dir in "${run_dirs[@]}"; do
-  [ -d "$run_dir" ] || continue
   run_name=$(basename "$run_dir")
   pm_file="$run_dir/02_pm_contract.md"
   reviewer_file="$run_dir/06_reviewer_report.md"
@@ -97,8 +102,7 @@ for run_dir in "${run_dirs[@]}"; do
 
   reviewer_decision=$(extract_md_field "$reviewer_file" decision)
   qa_result=$(extract_md_field "$qa_file" qa_result)
-  rollback_required=$(extract_md_field "$qa_file" "Rollback Required")
-  [ -n "$rollback_required" ] || rollback_required=$(grep -Ei '^## Rollback Required' -A2 "$qa_file" 2>/dev/null | tail -1 | sed 's/^ *//')
+  rollback_required=$(grep -Ei '^## Rollback Required' -A2 "$qa_file" 2>/dev/null | tail -1 | sed 's/^ *//' || true)
   final_decision=$(extract_md_field "$decision_file" decision)
 
   vf=$(validation_for_run "$run_dir")
@@ -127,5 +131,6 @@ for run_dir in "${run_dirs[@]}"; do
     '{run_name:$run_name,validation_status:$validation_status,first_failure_reason:$first_failure_reason,task_id:$task_id,pm_owner:$pm_owner,handoff_owner:$handoff_owner,handoff_next_agent:$handoff_next_agent,evidence_count:$evidence_count,deliverable_count:$deliverable_count,reviewer_decision:$reviewer_decision,qa_result:$qa_result,rollback_required:$rollback_required,final_decision:$final_decision}' >> "$JSONL_OUT"
 done
 
+echo "[OK] runs=${#run_dirs[@]}"
 echo "[OK] wrote $MD_OUT"
 echo "[OK] wrote $JSONL_OUT"
