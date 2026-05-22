@@ -42,18 +42,20 @@
 | infrastructure-agent | Kubernetes, Terraform, Docker, CI/CD | sonnet |
 | vector-db-agent | Vector search, RAG pipelines, embeddings | sonnet |
 
-## Meta & Orchestration Agents (3)
+## Meta & Orchestration Agents (4)
 | Agent | When to Use | Model |
 |-------|-------------|-------|
 | coordinator | Multi-agent orchestration, complex multi-step problems | opus |
 | critic-agent | Self-critique, iterative refinement (CRITIC pattern) | opus |
 | tree-of-thoughts | Multi-path exploration, architecture tradeoffs | opus |
+| reactor-agent | ReAct-style iterative investigation and tool-based exploration | sonnet |
 
 ## Auto-Trigger Rules
 - Product/project idea -> **pm-agent**, then **planner**
 - Complex feature request -> **planner** (mandatory)
 - Unknown technology/API/library/reference -> **research-agent**
 - Architecture/scalability decision -> **architect**
+- Multi-step investigation or unclear failure path -> **reactor-agent**
 - API/server/data model implementation -> **backend-agent**
 - UI/visual design request -> **designer-agent**, then **react-agent**
 - React/Next.js/TSX/JSX code -> **react-agent**
@@ -110,6 +112,7 @@ Use this contract for PM, research, backend, frontend, design, and QA handoffs. 
 | Planning | high | pm-agent, planner, architect, coordinator (Opus) |
 | Implementation | high | backend-agent, react-agent, code-reviewer, tdd-guide, security-reviewer (Sonnet) |
 | Verification | high | qa-agent, e2e-runner, debugger (Sonnet) |
+| Investigation | high | reactor-agent, tree-of-thoughts, critic-agent |
 | Simple edits | low | doc-updater, refactor-cleaner (Haiku when available) |
 
 ## Tool Strategy (Bash-First)
@@ -119,6 +122,7 @@ Use this contract for PM, research, backend, frontend, design, and QA handoffs. 
 
 - **Planning agents** (pm-agent, planner, architect, coordinator): Read, Grep, Glob only unless explicitly authorized.
 - **Research agents** (research-agent, architect, critic-agent, tree-of-thoughts): Read, Grep, Glob, WebSearch when needed; no file modification.
+- **Investigation agents** (reactor-agent, debugger): Read, Grep, Glob, Bash.
 - **Implementation agents** (backend-agent, react-agent, tdd-guide): Read, Write, Edit, Bash, Grep, Glob.
 - **Build agents** (build-error-resolver, go-build-resolver): Read, Write, Edit, Bash, Grep, Glob.
 - **Review/QA agents** (code-reviewer, security-reviewer, qa-agent, e2e-runner): use the smallest tool set needed for evidence and verification.
