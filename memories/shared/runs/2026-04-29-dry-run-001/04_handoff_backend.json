@@ -1,0 +1,29 @@
+{
+  "task_id": "T-DRY-001",
+  "owner": "backend-agent",
+  "owner_scope": "Implement read-only order summary API endpoint only.",
+  "inputs": [
+    "memories/shared/runs/2026-04-29-dry-run-001/02_pm_contract.md",
+    "memories/shared/runs/2026-04-29-dry-run-001/03_plan.md"
+  ],
+  "constraints": [
+    "Do not change authentication middleware",
+    "Preserve existing API response envelope"
+  ],
+  "deliverables": [
+    "src/api/orders-summary.ts",
+    "tests/api/orders-summary.test.ts"
+  ],
+  "evidence": [
+    "npm test -- orders-summary.test.ts: pass",
+    "npm run typecheck: pass"
+  ],
+  "validation_method": "code-reviewer followed by qa-agent",
+  "next_agent": "code-reviewer",
+  "open_questions": [],
+  "status": "needs-review",
+  "created_at": "2026-04-29T00:00:00Z",
+  "related_artifacts": [
+    "memories/shared/runs/2026-04-29-dry-run-001/05_backend_output.md"
+  ]
+}
