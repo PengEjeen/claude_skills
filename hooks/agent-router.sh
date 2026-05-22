@@ -83,6 +83,14 @@ if contains_any "$PROMPT_LC" "research" "reference" "compare" "competitor" "libr
   SCORE=$((SCORE + 3))
 fi
 
+if contains_any "$PROMPT_LC" "investigate" "investigation" "multi-step" "unclear" "hypothesis" "root cause" "trial" "observation" "원인분석" "조사해" "추적"; then
+  add_domain "investigation"
+  add_agent "reactor-agent"
+  SCORE=$((SCORE + 3))
+  [ "$TASK_TYPE" = "general" ] && TASK_TYPE="investigation"
+  [ "$RISK_LEVEL" = "low" ] && RISK_LEVEL="medium"
+fi
+
 if contains_any "$PROMPT_LC" "backend" "api" "endpoint" "server" "service" "repository" "database integration" "fastapi" "express" "서버" "백엔드"; then
   add_domain "backend"
   add_agent "backend-agent"
