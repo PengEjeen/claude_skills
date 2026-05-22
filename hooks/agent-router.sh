@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck shell=bash
-# UserPromptSubmit: Agent Router advisory hook
+# UserPromptSubmit: Agent Router advisory hook.
 # Classifies the user prompt and recommends agents without executing them.
 
 INPUT=$(</dev/stdin)
@@ -8,45 +8,18 @@ INPUT=$(</dev/stdin)
 skipped() {
   local reason="$1"
   if command -v jq >/dev/null 2>&1; then
-    jq -n --arg reason "$reason" '{
-      decision: "approve",
-      reason: ("[Agent Router] skipped: " + $reason),
-      harness: {
-        component: "agent-router",
-        score: 0,
-        domains: [],
-        recommended_agents: [],
-        verification_required: false
-      }
-    }'
+    jq -n --arg reason "$reason" '{decision:"approve",reason:("[Agent Router] skipped: "+$reason),harness:{component:"agent-router",score:0,domains:[],recommended_agents:[],verification_required:false}}'
   else
-    printf '{"decision":"approve","reason":"[Agent Router] skipped: jq unavailable","harness":{"component":"agent-router","score":0,"domains":[],"recommended_agents":[],"verification_required":false}}\n'
+    printf '{"decision":"approve","reason":"[Agent Router] skipped","harness":{"component":"agent-router","score":0,"domains":[],"recommended_agents":[],"verification_required":false}}\n'
   fi
   exit 0
 }
 
-if ! command -v jq >/dev/null 2>&1; then
-  skipped "jq unavailable"
-fi
+command -v jq >/dev/null 2>&1 || skipped "jq unavailable"
+printf '%s' "$INPUT" | jq -e . >/dev/null 2>&1 || skipped "invalid hook input"
 
-if ! echo "$INPUT" | jq -e . >/dev/null 2>&1; then
-  skipped "invalid hook input"
-fi
-
-PROMPT=$(echo "$INPUT" | jq -r '
-  .prompt
-  // .message
-  // .user_prompt
-  // .userPrompt
-  // .text
-  // .tool_input.prompt
-  // ""
-' 2>/dev/null) || skipped "prompt parse failed"
-
-if [ -z "$PROMPT" ] || [ "$PROMPT" = "null" ]; then
-  skipped "empty prompt"
-fi
-
+PROMPT=$(printf '%s' "$INPUT" | jq -r '.prompt // .message // .user_prompt // .userPrompt // .text // .tool_input.prompt // ""' 2>/dev/null) || skipped "prompt parse failed"
+[ -n "$PROMPT" ] && [ "$PROMPT" != "null" ] || skipped "empty prompt"
 PROMPT_LC=$(printf '%s' "$PROMPT" | tr '[:upper:]' '[:lower:]')
 
 contains_any() {
@@ -61,27 +34,22 @@ contains_any() {
   return 1
 }
 
-append_unique() {
+add_unique() {
   local value="$1"
-  local current
-  for current in "${VALUES_REF[@]}"; do
-    if [ "$current" = "$value" ]; then
-      return 0
-    fi
+  shift
+  local existing
+  for existing in "$@"; do
+    [ "$existing" = "$value" ] && return 1
   done
-  VALUES_REF+=("$value")
+  return 0
 }
 
 add_domain() {
-  VALUES_REF=("${DOMAINS[@]}")
-  append_unique "$1"
-  DOMAINS=("${VALUES_REF[@]}")
+  if add_unique "$1" "${DOMAINS[@]}"; then DOMAINS+=("$1"); fi
 }
 
 add_agent() {
-  VALUES_REF=("${AGENTS[@]}")
-  append_unique "$1"
-  AGENTS=("${VALUES_REF[@]}")
+  if add_unique "$1" "${AGENTS[@]}"; then AGENTS+=("$1"); fi
 }
 
 SCORE=0
@@ -90,17 +58,53 @@ AGENTS=()
 TASK_TYPE="general"
 RISK_LEVEL="low"
 VERIFICATION_REQUIRED=false
-
 DOCS_ONLY=false
+HAS_CODE_INTENT=false
+
 if contains_any "$PROMPT_LC" "docs" "documentation" "readme" "changelog" "guide" "문서" "문서화"; then
   DOCS_ONLY=true
 fi
 
-HAS_CODE_INTENT=false
 if contains_any "$PROMPT_LC" "implement" "add" "fix" "refactor" "change" "modify" "create" "build" "update" "코드" "구현" "수정" "추가" "리팩토링"; then
   HAS_CODE_INTENT=true
 fi
 
+# Project delivery routing
+if contains_any "$PROMPT_LC" "product" "project" "prd" "scope" "acceptance criteria" "requirements" "roadmap" "milestone" "프로젝트" "기획" "요구사항" "범위"; then
+  add_domain "product"
+  add_agent "pm-agent"
+  SCORE=$((SCORE + 4))
+  TASK_TYPE="planning"
+fi
+
+if contains_any "$PROMPT_LC" "research" "reference" "compare" "competitor" "library" "api docs" "documentation" "unknown" "조사" "레퍼런스" "비교" "문서"; then
+  add_domain "research"
+  add_agent "research-agent"
+  SCORE=$((SCORE + 3))
+fi
+
+if contains_any "$PROMPT_LC" "backend" "api" "endpoint" "server" "service" "repository" "database integration" "fastapi" "express" "서버" "백엔드"; then
+  add_domain "backend"
+  add_agent "backend-agent"
+  SCORE=$((SCORE + 4))
+  HAS_CODE_INTENT=true
+  VERIFICATION_REQUIRED=true
+fi
+
+if contains_any "$PROMPT_LC" "ux" "ui design" "visual" "layout" "icon" "design system" "wireframe" "디자인" "레이아웃" "아이콘"; then
+  add_domain "design"
+  add_agent "designer-agent"
+  SCORE=$((SCORE + 3))
+fi
+
+if contains_any "$PROMPT_LC" "qa" "release" "acceptance" "edge case" "regression" "readiness" "검증" "릴리즈" "회귀"; then
+  add_domain "qa"
+  add_agent "qa-agent"
+  SCORE=$((SCORE + 4))
+  VERIFICATION_REQUIRED=true
+fi
+
+# Existing domain routing
 if contains_any "$PROMPT_LC" "auth" "login" "token" "session" "jwt" "oauth" "permission" "role" "인증" "로그인" "권한" "세션" "토큰"; then
   add_domain "auth"
   add_agent "security-reviewer"
@@ -122,13 +126,11 @@ if contains_any "$PROMPT_LC" "docker" "kubernetes" "k8s" "terraform" "ci/cd" "de
   RISK_LEVEL="high"
 fi
 
-if contains_any "$PROMPT_LC" "react" "component" "hook" "frontend" "ui" "tsx" "jsx"; then
+if contains_any "$PROMPT_LC" "react" "next.js" "nextjs" "component" "hook" "frontend" "ui" "tsx" "jsx"; then
   add_domain "frontend"
   add_agent "react-agent"
   SCORE=$((SCORE + 4))
-  if [ "$RISK_LEVEL" = "low" ]; then
-    RISK_LEVEL="medium"
-  fi
+  [ "$RISK_LEVEL" = "low" ] && RISK_LEVEL="medium"
 fi
 
 if contains_any "$PROMPT_LC" "bug" "error" "failed" "exception" "traceback" "test fail" "test failure" "실패" "에러"; then
@@ -136,9 +138,7 @@ if contains_any "$PROMPT_LC" "bug" "error" "failed" "exception" "traceback" "tes
   add_agent "debugger"
   SCORE=$((SCORE + 4))
   TASK_TYPE="debug"
-  if [ "$RISK_LEVEL" = "low" ]; then
-    RISK_LEVEL="medium"
-  fi
+  [ "$RISK_LEVEL" = "low" ] && RISK_LEVEL="medium"
 fi
 
 if contains_any "$PROMPT_LC" "build error" "type error" "compile" "compilation" "tsc" "lint failed"; then
@@ -150,21 +150,15 @@ fi
 if [ "$HAS_CODE_INTENT" = true ]; then
   SCORE=$((SCORE + 2))
   VERIFICATION_REQUIRED=true
-  if [ "$TASK_TYPE" = "general" ]; then
-    TASK_TYPE="implementation"
-  fi
+  [ "$TASK_TYPE" = "general" ] && TASK_TYPE="implementation"
 fi
 
-if contains_any "$PROMPT_LC" "plan" "architecture" "design" "complex" "workflow" "orchestration" "설계" "아키텍처" "기획"; then
+if contains_any "$PROMPT_LC" "plan" "architecture" "design" "complex" "workflow" "orchestration" "설계" "아키텍처"; then
   SCORE=$((SCORE + 2))
-  if [ "$TASK_TYPE" = "general" ]; then
-    TASK_TYPE="planning"
-  fi
+  [ "$TASK_TYPE" = "general" ] && TASK_TYPE="planning"
 fi
 
-if [ "$DOCS_ONLY" = true ] \
-  && [ "${#DOMAINS[@]}" -eq 0 ] \
-  && ! contains_any "$PROMPT_LC" "code" "source" "implement" "fix" "refactor" "component" "api" "tsx" "jsx" "py" "go" "rs" "코드" "구현" "수정" "리팩토링"; then
+if [ "$DOCS_ONLY" = true ] && [ "${#DOMAINS[@]}" -eq 0 ] && ! contains_any "$PROMPT_LC" "code" "source" "implement" "fix" "refactor" "component" "api" "tsx" "jsx" "py" "go" "rs" "코드" "구현" "수정" "리팩토링"; then
   SCORE=2
   DOMAINS=()
   AGENTS=()
@@ -184,9 +178,7 @@ if [ "$DOCS_ONLY" = false ]; then
   fi
 fi
 
-if [ "$SCORE" -gt 12 ]; then
-  SCORE=12
-fi
+[ "$SCORE" -gt 12 ] && SCORE=12
 
 domains_json=$(printf '%s\n' "${DOMAINS[@]}" | jq -R -s 'split("\n") | map(select(length > 0))')
 agents_json=$(printf '%s\n' "${AGENTS[@]}" | jq -R -s 'split("\n") | map(select(length > 0))')
@@ -200,18 +192,6 @@ jq -n \
   --arg task_type "$TASK_TYPE" \
   --arg risk_level "$RISK_LEVEL" \
   --argjson verification_required "$VERIFICATION_REQUIRED" \
-  '{
-    decision: "approve",
-    reason: $reason,
-    harness: {
-      component: "agent-router",
-      score: $score,
-      task_type: $task_type,
-      risk_level: $risk_level,
-      domains: $domains,
-      recommended_agents: $agents,
-      verification_required: $verification_required
-    }
-  }'
+  '{decision:"approve",reason:$reason,harness:{component:"agent-router",score:$score,task_type:$task_type,risk_level:$risk_level,domains:$domains,recommended_agents:$agents,verification_required:$verification_required}}'
 
 exit 0
