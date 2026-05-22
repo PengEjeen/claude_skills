@@ -1,0 +1,29 @@
+{
+  "task_id": "T-001",
+  "owner": "backend-agent",
+  "owner_scope": "Implement read-only order summary API endpoint",
+  "inputs": [
+    "memories/shared/artifacts/prd.order-summary.md",
+    "src/api/orders.ts"
+  ],
+  "constraints": [
+    "Do not change auth middleware",
+    "Preserve existing response envelope"
+  ],
+  "deliverables": [
+    "src/api/orders-summary.ts",
+    "tests/api/orders-summary.test.ts"
+  ],
+  "evidence": [
+    "npm test -- orders-summary.test.ts: pass",
+    "npm run typecheck: pass"
+  ],
+  "validation_method": "code-reviewer followed by qa-agent",
+  "next_agent": "code-reviewer",
+  "open_questions": [],
+  "status": "needs-review",
+  "created_at": "2026-04-29T00:00:00Z",
+  "related_artifacts": [
+    "memories/shared/artifacts/prd.order-summary.md"
+  ]
+}
