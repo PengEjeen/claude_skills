@@ -15,6 +15,7 @@ on:
       - 'scripts/validate_memory_layer.sh'
       - 'scripts/validate_dry_runs.sh'
       - 'scripts/test_failure_injections.sh'
+      - 'scripts/generate_observability_report.sh'
       - '.github/workflows/validate-agents.yml'
   pull_request:
     paths:
@@ -30,6 +31,7 @@ on:
       - 'scripts/validate_memory_layer.sh'
       - 'scripts/validate_dry_runs.sh'
       - 'scripts/test_failure_injections.sh'
+      - 'scripts/generate_observability_report.sh'
       - '.github/workflows/validate-agents.yml'
 
 jobs:
@@ -53,3 +55,14 @@ jobs:
 
       - name: Test failure injections
         run: bash scripts/test_failure_injections.sh
+
+      - name: Generate observability report
+        run: bash scripts/generate_observability_report.sh
+
+      - name: Upload observability report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-observability
+          path: |
+            memories/shared/observability/dry_run_observability_latest.md
+            memories/shared/observability/dry_run_observability_latest.jsonl
