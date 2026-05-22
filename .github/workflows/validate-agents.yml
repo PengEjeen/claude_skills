@@ -4,16 +4,22 @@ on:
   push:
     paths:
       - 'agents/**'
+      - 'hooks/agent-router.sh'
       - 'rules/agents.md'
       - 'rules/agent-handoff-contract.md'
+      - 'rules/mcp-agent-policy.md'
       - 'scripts/validate_agent_contracts.sh'
+      - 'scripts/test_agent_router.sh'
       - '.github/workflows/validate-agents.yml'
   pull_request:
     paths:
       - 'agents/**'
+      - 'hooks/agent-router.sh'
       - 'rules/agents.md'
       - 'rules/agent-handoff-contract.md'
+      - 'rules/mcp-agent-policy.md'
       - 'scripts/validate_agent_contracts.sh'
+      - 'scripts/test_agent_router.sh'
       - '.github/workflows/validate-agents.yml'
 
 jobs:
@@ -25,3 +31,6 @@ jobs:
 
       - name: Validate agent contracts
         run: bash scripts/validate_agent_contracts.sh
+
+      - name: Test agent router
+        run: bash scripts/test_agent_router.sh
