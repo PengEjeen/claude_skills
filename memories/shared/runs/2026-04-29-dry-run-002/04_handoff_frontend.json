@@ -1,0 +1,31 @@
+{
+  "task_id": "T-DRY-002",
+  "owner": "react-agent",
+  "owner_scope": "Implement responsive landing page hero UI only.",
+  "inputs": [
+    "memories/shared/runs/2026-04-29-dry-run-002/02_pm_contract.md",
+    "memories/shared/runs/2026-04-29-dry-run-002/03_plan.md"
+  ],
+  "constraints": [
+    "Mobile-first layout",
+    "Reuse existing design tokens",
+    "Primary CTA must be keyboard accessible"
+  ],
+  "deliverables": [
+    "src/components/LandingHero.tsx",
+    "tests/components/LandingHero.test.tsx"
+  ],
+  "evidence": [
+    "npm test -- LandingHero.test.tsx: pass",
+    "npm run lint: pass",
+    "manual keyboard check: pass"
+  ],
+  "validation_method": "code-reviewer and a11y-reviewer followed by qa-agent",
+  "next_agent": "code-reviewer",
+  "open_questions": [],
+  "status": "needs-review",
+  "created_at": "2026-04-29T00:00:00Z",
+  "related_artifacts": [
+    "memories/shared/runs/2026-04-29-dry-run-002/05_frontend_output.md"
+  ]
+}
