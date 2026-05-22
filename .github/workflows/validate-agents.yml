@@ -1,0 +1,27 @@
+name: Validate Agent Contracts
+
+on:
+  push:
+    paths:
+      - 'agents/**'
+      - 'rules/agents.md'
+      - 'rules/agent-handoff-contract.md'
+      - 'scripts/validate_agent_contracts.sh'
+      - '.github/workflows/validate-agents.yml'
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'rules/agents.md'
+      - 'rules/agent-handoff-contract.md'
+      - 'scripts/validate_agent_contracts.sh'
+      - '.github/workflows/validate-agents.yml'
+
+jobs:
+  validate-agent-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate agent contracts
+        run: bash scripts/validate_agent_contracts.sh
