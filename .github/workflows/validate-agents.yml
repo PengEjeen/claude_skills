@@ -14,6 +14,7 @@ on:
       - 'scripts/test_agent_router.sh'
       - 'scripts/validate_memory_layer.sh'
       - 'scripts/validate_dry_runs.sh'
+      - 'scripts/test_failure_injections.sh'
       - '.github/workflows/validate-agents.yml'
   pull_request:
     paths:
@@ -28,6 +29,7 @@ on:
       - 'scripts/test_agent_router.sh'
       - 'scripts/validate_memory_layer.sh'
       - 'scripts/validate_dry_runs.sh'
+      - 'scripts/test_failure_injections.sh'
       - '.github/workflows/validate-agents.yml'
 
 jobs:
@@ -48,3 +50,6 @@ jobs:
 
       - name: Validate dry-runs
         run: bash scripts/validate_dry_runs.sh
+
+      - name: Test failure injections
+        run: bash scripts/test_failure_injections.sh
