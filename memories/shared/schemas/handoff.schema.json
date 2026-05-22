@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/claude-skills/handoff.schema.json",
+  "title": "Agent Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "owner",
+    "owner_scope",
+    "inputs",
+    "constraints",
+    "deliverables",
+    "evidence",
+    "validation_method",
+    "next_agent",
+    "open_questions",
+    "status"
+  ],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "owner_scope": { "type": "string", "minLength": 1 },
+    "inputs": { "type": "array", "items": { "type": "string" } },
+    "constraints": { "type": "array", "items": { "type": "string" } },
+    "deliverables": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "validation_method": { "type": "string", "minLength": 1 },
+    "next_agent": { "type": "string", "minLength": 1 },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["complete", "blocked", "needs-review", "needs-clarification"] },
+    "created_at": { "type": "string" },
+    "related_artifacts": { "type": "array", "items": { "type": "string" } }
+  }
+}
