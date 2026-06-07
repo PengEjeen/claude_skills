@@ -30,6 +30,7 @@
       "Bash(iconv:*)",
       "Bash(tee:*)",
       "Edit",
+      "MultiEdit",
       "Write",
       "Read",
       "Grep",
@@ -128,7 +129,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -168,7 +169,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
