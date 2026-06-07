@@ -1,23 +1,34 @@
 #!/bin/bash
 # shellcheck shell=bash
-# PostToolUse (Edit|Write): Verification Loop
+# PostToolUse (Edit|MultiEdit|Write): Verification Loop
 # 코드 변경 후 관련 테스트를 자동 실행하고, 실패 시 피드백을 컨텍스트에 주입
 # Spotify Honk 패턴: 환각 34% 감소, 코드 품질 28% 향상
 # Dust.tt verification loop: test -> parse -> feedback cycle
 # Output format: {"decision":"approve","reason":"..."}
 
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
-# Only trigger on Edit or Write
-if [ "$TOOL_NAME" != "Edit" ] && [ "$TOOL_NAME" != "Write" ]; then
+if ! command -v jq >/dev/null 2>&1; then
+  printf '{"decision":"approve","reason":"[Verification Loop] skipped: jq unavailable"}\n'
   exit 0
 fi
 
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+if ! printf '%s' "$INPUT" | jq -e . >/dev/null 2>&1; then
+  printf '{"decision":"approve","reason":"[Verification Loop] skipped: invalid hook input"}\n'
+  exit 0
+fi
+
+TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
+
+# Only trigger on Edit, MultiEdit, or Write
+if [ "$TOOL_NAME" != "Edit" ] && [ "$TOOL_NAME" != "MultiEdit" ] && [ "$TOOL_NAME" != "Write" ]; then
+  exit 0
+fi
+
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')
 
 # No file path detected
-if [ -z "$FILE_PATH" ]; then
+if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
   exit 0
 fi
 
@@ -37,17 +48,17 @@ case "$FILE_PATH" in
   *node_modules*|*dist/*|*build/*|*vendor/*|*.min.*) exit 0 ;;
 esac
 
-# Session-specific lock to prevent parallel runs
+# Session-and-file-specific lock to prevent parallel duplicate runs without skipping later files
 SESSION_KEY="${CLAUDE_SESSION_ID:-$$}"
-LOCK_FILE="${TMPDIR:-/tmp}/claude-verify-loop-${SESSION_KEY}"
+FILE_KEY=$(printf '%s' "$FILE_PATH" | sha256sum | awk '{print $1}')
+LOCK_FILE="${TMPDIR:-/tmp}/claude-verify-loop-${SESSION_KEY}-${FILE_KEY}"
 
-# Debounce: don't run if already ran in last 30 seconds
+# Debounce: don't rerun the same file immediately after formatter-induced edits
 if [ -f "$LOCK_FILE" ]; then
-  # Cross-platform stat for modification time
-  LOCK_MOD=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0)
+  LOCK_MOD=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0)
   NOW=$(date +%s)
   LOCK_AGE=$(( NOW - LOCK_MOD ))
-  if [ "$LOCK_AGE" -lt 30 ]; then
+  if [ "$LOCK_AGE" -lt 5 ]; then
     exit 0
   fi
 fi
@@ -59,7 +70,7 @@ DIRNAME=$(dirname "$FILE_PATH")
 NAME_NO_EXT="${BASENAME%.*}"
 EXT="${BASENAME##*.}"
 TEST_FILE=""
-TEST_CMD=""
+TEST_KIND=""
 
 # Detect project type and find related test file
 case "$EXT" in
@@ -74,12 +85,10 @@ case "$EXT" in
       "test/test_${NAME_NO_EXT}.py"; do
       if [ -f "$candidate" ]; then
         TEST_FILE="$candidate"
+        TEST_KIND="pytest"
         break
       fi
     done
-    if [ -n "$TEST_FILE" ]; then
-      TEST_CMD="python -m pytest '${TEST_FILE}' --tb=short -q --no-header 2>&1"
-    fi
     ;;
   ts|tsx)
     # TypeScript: look for *.test.ts(x), *.spec.ts(x)
@@ -92,18 +101,15 @@ case "$EXT" in
         "${DIRNAME}/../__tests__/${NAME_NO_EXT}.${suffix}.${EXT}"; do
         if [ -f "$candidate" ]; then
           TEST_FILE="$candidate"
+          if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ] || [ -f "vite.config.ts" ]; then
+            TEST_KIND="vitest"
+          else
+            TEST_KIND="jest"
+          fi
           break 2
         fi
       done
     done
-    if [ -n "$TEST_FILE" ]; then
-      # Prefer vitest, fall back to jest
-      if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ] || [ -f "vite.config.ts" ]; then
-        TEST_CMD="npx vitest run '${TEST_FILE}' --reporter=verbose 2>&1"
-      else
-        TEST_CMD="npx jest '${TEST_FILE}' --no-coverage --verbose 2>&1"
-      fi
-    fi
     ;;
   js|jsx)
     # JavaScript: look for *.test.js(x), *.spec.js(x)
@@ -116,53 +122,74 @@ case "$EXT" in
         "${DIRNAME}/../__tests__/${NAME_NO_EXT}.${suffix}.${EXT}"; do
         if [ -f "$candidate" ]; then
           TEST_FILE="$candidate"
+          if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ] || [ -f "vite.config.ts" ]; then
+            TEST_KIND="vitest"
+          else
+            TEST_KIND="jest"
+          fi
           break 2
         fi
       done
     done
-    if [ -n "$TEST_FILE" ]; then
-      if [ -f "vitest.config.ts" ] || [ -f "vitest.config.js" ] || [ -f "vite.config.ts" ]; then
-        TEST_CMD="npx vitest run '${TEST_FILE}' --reporter=verbose 2>&1"
-      else
-        TEST_CMD="npx jest '${TEST_FILE}' --no-coverage --verbose 2>&1"
-      fi
-    fi
     ;;
   go)
     # Go: run tests in the same package directory
     GO_TEST_FILE=$(find "$DIRNAME" -maxdepth 1 -name "*_test.go" -print -quit 2>/dev/null)
     if [ -n "$GO_TEST_FILE" ]; then
       TEST_FILE="$GO_TEST_FILE"
-      TEST_CMD="cd '${DIRNAME}' && go test -v -run . -count=1 -timeout 5s 2>&1"
+      TEST_KIND="go"
     fi
     ;;
   rs)
     # Rust: run cargo test for the specific module
-    TEST_FILE="$FILE_PATH"
     if grep -qE '#\[cfg\(test\)\]|#\[test\]' "$FILE_PATH" 2>/dev/null; then
-      TEST_CMD="cargo test --lib -- '${NAME_NO_EXT}' 2>&1"
+      TEST_FILE="$FILE_PATH"
+      TEST_KIND="cargo-lib"
     elif [ -d "${DIRNAME}/../tests" ]; then
       RS_TEST=$(find "${DIRNAME}/../tests" -name "${NAME_NO_EXT}*.rs" -print -quit 2>/dev/null)
       if [ -n "$RS_TEST" ]; then
         TEST_FILE="$RS_TEST"
-        TEST_CMD="cargo test --test '${NAME_NO_EXT}' 2>&1"
-      else
-        TEST_FILE=""
+        TEST_KIND="cargo-test"
       fi
-    else
-      TEST_FILE=""
     fi
     ;;
 esac
 
 # No related test file found -- silent exit
-if [ -z "$TEST_FILE" ] || [ -z "$TEST_CMD" ]; then
+if [ -z "$TEST_FILE" ] || [ -z "$TEST_KIND" ]; then
   exit 0
 fi
 
 # Run test with 5-second timeout
-RESULT=$(timeout 5 bash -c "$TEST_CMD" 2>&1)
-EXIT_CODE=$?
+case "$TEST_KIND" in
+  pytest)
+    RESULT=$(timeout 5 python -m pytest "$TEST_FILE" --tb=short -q --no-header 2>&1)
+    EXIT_CODE=$?
+    ;;
+  vitest)
+    RESULT=$(timeout 5 npx vitest run "$TEST_FILE" --reporter=verbose 2>&1)
+    EXIT_CODE=$?
+    ;;
+  jest)
+    RESULT=$(timeout 5 npx jest "$TEST_FILE" --no-coverage --verbose 2>&1)
+    EXIT_CODE=$?
+    ;;
+  go)
+    RESULT=$(cd "$DIRNAME" && timeout 5 go test -v -run . -count=1 -timeout 5s 2>&1)
+    EXIT_CODE=$?
+    ;;
+  cargo-lib)
+    RESULT=$(timeout 5 cargo test --lib -- "$NAME_NO_EXT" 2>&1)
+    EXIT_CODE=$?
+    ;;
+  cargo-test)
+    RESULT=$(timeout 5 cargo test --test "$NAME_NO_EXT" 2>&1)
+    EXIT_CODE=$?
+    ;;
+  *)
+    exit 0
+    ;;
+esac
 
 # Timeout (exit 124) -- don't block, just note it
 if [ "$EXIT_CODE" -eq 124 ]; then
