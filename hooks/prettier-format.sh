@@ -2,12 +2,12 @@
 # shellcheck shell=bash
 # PostToolUse: Auto-format JS/TS/CSS/JSON files with Prettier
 # Project-level hook (depends on project's node_modules)
-# Output format: {"decision":"approve","reason":"..."}
+# Output format: silent on success, JSON only on failure
 
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
-if [ "$TOOL_NAME" != "Edit" ] && [ "$TOOL_NAME" != "Write" ]; then
+if [ "$TOOL_NAME" != "Edit" ] && [ "$TOOL_NAME" != "MultiEdit" ] && [ "$TOOL_NAME" != "Write" ]; then
   exit 0
 fi
 
@@ -46,13 +46,10 @@ if [ ! -f "$PRETTIER" ]; then
   exit 0
 fi
 
-# Run prettier
+# Run prettier. Keep success silent to avoid slowing and cluttering the loop.
 BASENAME=$(basename "$FILE_PATH")
-if "$PRETTIER" --write "$FILE_PATH" 2>/dev/null; then
-  jq -n --arg f "$BASENAME" '{
-    decision: "approve",
-    reason: ("[FORMAT] Prettier auto-formatted: " + $f)
-  }'
+if "$PRETTIER" --write "$FILE_PATH" >/dev/null 2>&1; then
+  exit 0
 else
   jq -n --arg f "$BASENAME" '{
     decision: "approve",
