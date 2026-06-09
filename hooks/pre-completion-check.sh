@@ -1,22 +1,24 @@
 #!/bin/bash
 # shellcheck shell=bash
 # Stop: PreCompletionChecklist — verify tests were actually run before session ends
-# Checks git diff for code changes and warns if no test execution was detected
+# Checks git diff for code changes and warns if no test execution was detected.
+# Emits at most one block per session to avoid Stop hook retry loops.
 # Output format: {"decision":"approve|block","reason":"..."}
 
 INPUT=$(cat)
+: "${INPUT:=}"
 
-# Session-specific lock to prevent infinite loop and multi-session conflicts
+# Session-specific lock to prevent infinite Stop retry loops and multi-session conflicts.
 SESSION_KEY="${CLAUDE_SESSION_ID:-${PPID:-unknown}}"
 LOCK_FILE="${TMPDIR:-/tmp}/claude-pre-completion-${SESSION_KEY}"
 
 if [ -f "$LOCK_FILE" ]; then
   exit 0
 fi
-touch "$LOCK_FILE"
 
 # Check if we're in a git repo
 if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  touch "$LOCK_FILE"
   exit 0
 fi
 
@@ -27,6 +29,7 @@ UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null | grep -cE '\.(
 TOTAL_CODE=$((CODE_CHANGED + STAGED_CODE + UNTRACKED))
 
 if [ "$TOTAL_CODE" -eq 0 ]; then
+  touch "$LOCK_FILE"
   exit 0
 fi
 
@@ -65,6 +68,10 @@ if git diff --name-only HEAD 2>/dev/null | grep -qE '\.go$' || \
   fi
 fi
 
+# Touch before emitting a block. If Claude continues and Stop fires again, the
+# hook exits silently instead of re-blocking forever.
+touch "$LOCK_FILE"
+
 if [ -n "$WARNINGS" ]; then
   # regression-gate 연동: 실패 기록 저장
   FAIL_LOG="$HOME/.claude/traces/last-test-failures.txt"
@@ -73,7 +80,7 @@ if [ -n "$WARNINGS" ]; then
 
   jq -n --arg w "$WARNINGS" --arg cnt "$TOTAL_CODE" '{
     decision: "block",
-    reason: ("[PRE-COMPLETION CHECK] " + $cnt + " code file(s) changed. " + $w + "\nBefore finishing, run tests to verify:\n- Python: pytest tests/ -x -q\n- JS/TS: npx vitest run\n- Go: go test ./...\n- Rust: cargo test\n\nSkip only if changes are config/docs only.")
+    reason: ("[PRE-COMPLETION CHECK] " + $cnt + " code file(s) changed. " + $w + "\nBefore finishing, run tests to verify:\n- Python: pytest tests/ -x -q\n- JS/TS: npx vitest run\n- Go: go test ./...\n- Rust: cargo test\n\nThis warning is emitted once per session to avoid Stop hook retry loops.")
   }'
 else
   jq -n '{
